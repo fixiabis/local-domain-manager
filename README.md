@@ -8,6 +8,7 @@ Local Domain Manager 是一個用於在本地開發環境中管理自訂域名�
 - 🌐 自動管理 `/etc/hosts` 檔案對應
 - 🔄 Nginx 反向代理設定
 - 🛠️ 支援動態端口變更
+- 🌍 支援動態 IP 變更
 - 📝 自動產生和管理 Nginx 配置檔
 - 🔄 WebSocket 支援
 
@@ -35,12 +36,16 @@ mkcert -install
 為新域名設定完整的本地開發環境：
 
 ```bash
-./local-domain.sh <domain> init [-p <port>]
+./local-domain.sh <domain> init [-p <port>] [-a <ip>]
 ```
 
 範例：
 ```bash
+# 使用預設 IP (127.0.0.1)
 ./local-domain.sh example.com init -p 3000
+
+# 指定自訂 IP 位址
+./local-domain.sh example.com init -p 3000 -a 192.168.1.100
 ```
 
 這會執行以下操作：
@@ -71,6 +76,23 @@ mkcert -install
 範例：
 ```bash
 ./local-domain.sh example.com port change 8080
+```
+
+### 變更 IP 位址
+
+動態變更反向代理的目標 IP 位址：
+
+```bash
+./local-domain.sh <domain> ip change <new-ip>
+```
+
+範例：
+```bash
+# 變更到其他機器的 IP
+./local-domain.sh example.com ip change 192.168.1.100
+
+# 變更回本機
+./local-domain.sh example.com ip change 127.0.0.1
 ```
 
 ### 重新生成憑證
@@ -140,13 +162,17 @@ npm start
 # 4. 如果需要變更端口
 ./local-domain.sh my-app.local port change 8080
 
-# 5. 如果不再需要該域名
+# 5. 如果需要代理到其他機器
+./local-domain.sh my-app.local ip change 192.168.1.100
+
+# 6. 如果不再需要該域名
 ./local-domain.sh my-app.local host-mapping remove
 ```
 
 ## 注意事項
 
-- 所有域名都會指向 `127.0.0.1`
+- 域名預設會指向 `127.0.0.1`，但可透過 `-a` 參數或 `ip change` 命令變更
+- IP 變更只會影響 Nginx 反向代理設定，不會修改 hosts 檔案
 - 憑證由 mkcert 生成，僅在安裝了相同根憑證的機器上有效
 - 變更配置後會自動重載 Nginx
 - 建議在移除域名前先停止相關服務

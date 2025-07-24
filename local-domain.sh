@@ -14,15 +14,17 @@ HOSTS_FILE="/etc/hosts"
 
 usage() {
   echo "Usage:"
-  echo "  $0 <domain> init [-p <port>]"
+  echo "  $0 <domain> init [-p <port>] [-a <ip>]"
   echo "  $0 <domain> host-mapping <add|remove>"
   echo "  $0 <domain> port change <port>"
+  echo "  $0 <domain> ip change <ip>"
   echo "  $0 <domain> cert regenerate"
   echo ""
   echo "Examples:"
-  echo "  $0 example.com init -p 3000"
+  echo "  $0 example.com init -p 3000 -a 192.168.1.100"
   echo "  $0 example.com host-mapping add"
   echo "  $0 example.com port change 3000"
+  echo "  $0 example.com ip change 192.168.1.100"
   echo "  $0 example.com cert regenerate"
   exit 1
 }
@@ -93,6 +95,15 @@ get_current_port() {
   fi
 }
 
+get_current_ip() {
+  local nginx_conf="$DOMAIN_DIR/nginx.conf"
+  if [ -f "$nginx_conf" ]; then
+    grep "proxy_pass" "$nginx_conf" | sed 's/.*http:\/\/\([^:]*\):.*/\1/' | head -1
+  else
+    echo ""
+  fi
+}
+
 change_port() {
   local new_port="$1"
   local nginx_conf="$DOMAIN_DIR/nginx.conf"
@@ -111,6 +122,28 @@ change_port() {
   echo "=== 變更端口從 $current_port 到 $new_port ==="
   sed -i.bak "s/127\.0\.0\.1:[0-9]*/127.0.0.1:$new_port/g" "$nginx_conf"
   echo "已更新 nginx 配置，新端口: $new_port"
+  
+  reload_nginx
+}
+
+change_ip() {
+  local new_ip="$1"
+  local nginx_conf="$DOMAIN_DIR/nginx.conf"
+  
+  if [ ! -f "$nginx_conf" ]; then
+    echo "錯誤: $nginx_conf 不存在，請先執行 init 命令"
+    exit 1
+  fi
+  
+  local current_ip=$(get_current_ip)
+  if [ "$current_ip" = "$new_ip" ]; then
+    echo "IP 已經是 $new_ip，無需修改"
+    return
+  fi
+  
+  echo "=== 變更 IP 從 $current_ip 到 $new_ip ==="
+  sed -i.bak "s/http:\/\/[^:]*:/http:\/\/$new_ip:/g" "$nginx_conf"
+  echo "已更新 nginx 配置，新 IP: $new_ip"
   
   reload_nginx
 }
@@ -140,7 +173,7 @@ server {
     ssl_ciphers HIGH:!aNULL:!MD5;
 
     location / {
-        proxy_pass http://127.0.0.1:$PORT;
+        proxy_pass http://$IP:$PORT;
         proxy_set_header Host \$host;
         proxy_set_header X-Real-IP \$remote_addr;
         proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
@@ -185,11 +218,15 @@ reload_nginx() {
 }
 
 cmd_init() {
-  # 解析 -p 參數
+  # 解析 -p 和 -a 參數
   while [[ $# -gt 0 ]]; do
     case $1 in
       -p)
         PORT="$2"
+        shift 2
+        ;;
+      -a)
+        IP="$2"
         shift 2
         ;;
       *)
@@ -239,6 +276,21 @@ cmd_port() {
   change_port "$new_port"
 }
 
+cmd_ip() {
+  if [ "$SUBCOMMAND" != "change" ]; then
+    echo "錯誤: ip 命令需要 change 參數"
+    usage
+  fi
+  
+  local new_ip="$4"
+  if [ -z "$new_ip" ]; then
+    echo "錯誤: 請指定 IP 位址"
+    usage
+  fi
+  
+  change_ip "$new_ip"
+}
+
 cmd_cert() {
   if [ "$SUBCOMMAND" != "regenerate" ]; then
     echo "錯誤: cert 命令需要 regenerate 參數"
@@ -262,6 +314,9 @@ main() {
       ;;
     port)
       cmd_port "$@"
+      ;;
+    ip)
+      cmd_ip "$@"
       ;;
     cert)
       cmd_cert
