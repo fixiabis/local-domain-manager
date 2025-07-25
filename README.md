@@ -31,6 +31,26 @@ mkcert -install
 
 ## 使用方式
 
+### 查看域名狀態
+
+查看指定域名的配置狀態：
+
+```bash
+./local-domain.sh <domain>
+```
+
+範例：
+```bash
+./local-domain.sh example.com
+```
+
+這會顯示：
+- Host mapping 狀態（是否存在於 /etc/hosts）
+- 憑證狀態（是否已生成 SSL 憑證）
+- 目前的 IP 設定
+- 目前的 Port 設定
+- 整體配置狀態
+
 ### 初始化新域名
 
 為新域名設定完整的本地開發環境：
@@ -151,21 +171,27 @@ Servers/
 完整的使用流程：
 
 ```bash
-# 1. 初始化域名（會自動完成所有設定）
+# 1. 檢查域名狀態
+./local-domain.sh my-app.local
+
+# 2. 初始化域名（會自動完成所有設定）
 ./local-domain.sh my-app.local init -p 3000
 
-# 2. 啟動你的應用程式在 port 3000
+# 3. 再次檢查狀態確認配置完成
+./local-domain.sh my-app.local
+
+# 4. 啟動你的應用程式在 port 3000
 npm start
 
-# 3. 在瀏覽器中訪問 https://my-app.local
+# 5. 在瀏覽器中訪問 https://my-app.local
 
-# 4. 如果需要變更端口
+# 6. 如果需要變更端口
 ./local-domain.sh my-app.local port change 8080
 
-# 5. 如果需要代理到其他機器
+# 7. 如果需要代理到其他機器
 ./local-domain.sh my-app.local ip change 192.168.1.100
 
-# 6. 如果不再需要該域名
+# 8. 如果不再需要該域名
 ./local-domain.sh my-app.local host-mapping remove
 ```
 

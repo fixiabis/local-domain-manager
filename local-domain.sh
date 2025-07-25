@@ -14,6 +14,7 @@ HOSTS_FILE="/etc/hosts"
 
 usage() {
   echo "Usage:"
+  echo "  $0 <domain>                                    # Show domain status"
   echo "  $0 <domain> init [-p <port>] [-a <ip>]"
   echo "  $0 <domain> host-mapping <add|remove>"
   echo "  $0 <domain> port change <port>"
@@ -21,6 +22,7 @@ usage() {
   echo "  $0 <domain> cert regenerate"
   echo ""
   echo "Examples:"
+  echo "  $0 example.com                                 # Show status"
   echo "  $0 example.com init -p 3000 -a 192.168.1.100"
   echo "  $0 example.com host-mapping add"
   echo "  $0 example.com port change 3000"
@@ -30,7 +32,7 @@ usage() {
 }
 
 check_args() {
-  if [ $# -lt 2 ]; then
+  if [ $# -lt 1 ]; then
     usage
   fi
 
@@ -101,6 +103,29 @@ get_current_ip() {
     grep "proxy_pass" "$nginx_conf" | sed 's/.*http:\/\/\([^:]*\):.*/\1/' | head -1
   else
     echo ""
+  fi
+}
+
+check_host_mapping() {
+  if grep -qE "^\s*[0-9.]+\s+$DOMAIN(\s|$)" "$HOSTS_FILE"; then
+    echo "存在"
+    return 0
+  else
+    echo "不存在"
+    return 1
+  fi
+}
+
+check_cert() {
+  local cert_file="$DOMAIN_DIR/cert.pem"
+  local key_file="$DOMAIN_DIR/cert-key.pem"
+  
+  if [ -f "$cert_file" ] && [ -f "$key_file" ]; then
+    echo "存在"
+    return 0
+  else
+    echo "不存在"
+    return 1
   fi
 }
 
@@ -301,8 +326,48 @@ cmd_cert() {
   reload_nginx
 }
 
+cmd_status() {
+  echo "=== $DOMAIN 狀態資訊 ==="
+  
+  local host_mapping_status=$(check_host_mapping)
+  echo "Host mapping: $host_mapping_status"
+  
+  local cert_status=$(check_cert)
+  echo "憑證: $cert_status"
+  
+  local current_ip=$(get_current_ip)
+  if [ -n "$current_ip" ]; then
+    echo "IP: $current_ip"
+  else
+    echo "IP: 未設定"
+  fi
+  
+  local current_port=$(get_current_port)
+  if [ -n "$current_port" ]; then
+    echo "Port: $current_port"
+  else
+    echo "Port: 未設定"
+  fi
+  
+  echo ""
+  
+  if [ ! -f "$DOMAIN_DIR/nginx.conf" ]; then
+    echo "狀態: 未初始化 (執行 '$0 $DOMAIN init' 進行初始化)"
+  elif [ "$host_mapping_status" = "不存在" ] || [ "$cert_status" = "不存在" ]; then
+    echo "狀態: 配置不完整"
+  else
+    echo "狀態: 已配置完成"
+  fi
+}
+
 main() {
   check_args "$@"
+  
+  # 如果只有 domain 參數，顯示狀態
+  if [ -z "$COMMAND" ]; then
+    cmd_status
+    return
+  fi
   
   case "$COMMAND" in
     init)
