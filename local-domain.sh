@@ -91,7 +91,7 @@ remove_host_mapping() {
 get_current_port() {
   local nginx_conf="$DOMAIN_DIR/nginx.conf"
   if [ -f "$nginx_conf" ]; then
-    grep "proxy_pass" "$nginx_conf" | sed 's/.*127\.0\.0\.1:\([0-9]*\).*/\1/' | head -1
+    grep "proxy_pass" "$nginx_conf" | sed 's/.*:\/\/[^:]*:\([0-9]*\).*/\1/' | head -1
   else
     echo ""
   fi
@@ -100,7 +100,7 @@ get_current_port() {
 get_current_ip() {
   local nginx_conf="$DOMAIN_DIR/nginx.conf"
   if [ -f "$nginx_conf" ]; then
-    grep "proxy_pass" "$nginx_conf" | sed 's/.*http:\/\/\([^:]*\):.*/\1/' | head -1
+    grep "proxy_pass" "$nginx_conf" | sed 's/.*:\/\/\([^:]*\):.*/\1/' | head -1
   else
     echo ""
   fi
@@ -167,7 +167,7 @@ change_ip() {
   fi
   
   echo "=== 變更 IP 從 $current_ip 到 $new_ip ==="
-  sed -i.bak "s/http:\/\/[^:]*:/http:\/\/$new_ip:/g" "$nginx_conf"
+  sed -i.bak "s/:\/\/[^:]*:/:\/\/$new_ip:/g" "$nginx_conf"
   echo "已更新 nginx 配置，新 IP: $new_ip"
   
   reload_nginx
