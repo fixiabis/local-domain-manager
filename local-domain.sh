@@ -16,7 +16,7 @@ usage() {
   echo "Usage:"
   echo "  $0 <domain>                                    # Show domain status"
   echo "  $0 <domain> init [-p <port>] [-a <ip>]"
-  echo "  $0 <domain> host-mapping <add|remove>"
+  echo "  $0 <domain> host-mapping <add|remove|toggle>"
   echo "  $0 <domain> port change <port>"
   echo "  $0 <domain> ip change <ip>"
   echo "  $0 <domain> cert regenerate"
@@ -25,6 +25,7 @@ usage() {
   echo "  $0 example.com                                 # Show status"
   echo "  $0 example.com init -p 3000 -a 192.168.1.100"
   echo "  $0 example.com host-mapping add"
+  echo "  $0 example.com host-mapping toggle"
   echo "  $0 example.com port change 3000"
   echo "  $0 example.com ip change 192.168.1.100"
   echo "  $0 example.com cert regenerate"
@@ -85,6 +86,17 @@ remove_host_mapping() {
     echo "已從 hosts 檔案移除 $DOMAIN"
   else
     echo "$DOMAIN 不存在於 $HOSTS_FILE"
+  fi
+}
+
+toggle_host_mapping() {
+  echo "=== 切換 host mapping ==="
+  if grep -qE "^\s*$IP\s+$DOMAIN(\s|$)" "$HOSTS_FILE"; then
+    echo "$DOMAIN 已存在，將移除"
+    remove_host_mapping
+  else
+    echo "$DOMAIN 不存在，將新增"
+    add_host_mapping
   fi
 }
 
@@ -279,8 +291,11 @@ cmd_host_mapping() {
     remove)
       remove_host_mapping
       ;;
+    toggle)
+      toggle_host_mapping
+      ;;
     *)
-      echo "錯誤: host-mapping 需要 add 或 remove 參數"
+      echo "錯誤: host-mapping 需要 add、remove 或 toggle 參數"
       usage
       ;;
   esac

@@ -83,6 +83,9 @@ mkcert -install
 
 # 從 hosts 檔案移除域名（需要 sudo）
 ./local-domain.sh <domain> host-mapping remove
+
+# 從 hosts 檔案新增或移除（如果已新增）域名（需要 sudo）
+./local-domain.sh <domain> host-mapping toggle
 ```
 
 ### 變更端口
